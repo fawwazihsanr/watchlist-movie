@@ -10,6 +10,16 @@ from api.clients import get_the_movie_db_client
 
 class ListRepository:
     @staticmethod
+    def get_platform_list(media_type, page):
+        the_movie_db_client = get_the_movie_db_client()
+        response, error = the_movie_db_client.get_list_media(media_type, page)
+
+        if error:
+            return error, False
+
+        return response, True
+
+    @staticmethod
     def create_list(data, user):
         with transaction.atomic():
             Watchlist.objects.create(
@@ -73,14 +83,18 @@ class ListRepository:
 
     @staticmethod
     def add_item_to_watchlist(user, watchlist_id, datas):
-        async_task('watch_list_movie.core.repositories.ListRepository.save_item',
-                   user, watchlist_id, datas)
+        async_task(ListRepository.save_item, user, watchlist_id, datas)
+        # Use the below one if favorite items not added, because sometimes queue not executed.
+        # ListRepository.save_item(user, watchlist_id, datas)
         return 'Updated, please see your data', True
 
     @staticmethod
     def save_item(user, watchlist_id, datas):
         with transaction.atomic():
             the_movie_db_client = get_the_movie_db_client()
+            movie = FavoriteMovieShows.objects.filter(watchlist_id=watchlist_id, username=user)
+            tv = FavoriteTvShows.objects.filter(watchlist_id=watchlist_id, username=user)
+
             for data in datas:
                 if data['media_type'] == 'movie':
                     response, error = the_movie_db_client\
@@ -102,6 +116,9 @@ class ListRepository:
                     return error_details, False
 
                 if data['media_type'] == 'movie':
+                    check_movie_is_exist = movie.filter(movie_id=response_details['movie_results'][0]['id']).last()
+                    if check_movie_is_exist:
+                        continue
                     response_details['movie_results'][0]['movie_id'] = \
                         response_details['movie_results'][0].pop('id')
                     FavoriteMovieShows.objects.create(
@@ -110,6 +127,10 @@ class ListRepository:
                         **response_details['movie_results'][0]
                     )
                 elif data['media_type'] == 'tv':
+                    check_tv_is_exist = tv.filter(
+                        movie_id=response_details['tv_results'][0]['id']).last()
+                    if check_tv_is_exist:
+                        continue
                     response_details['movie_results'][0]['tv_id'] = \
                         response_details['movie_results'][0].pop('id')
                     FavoriteTvShows.objects.create(

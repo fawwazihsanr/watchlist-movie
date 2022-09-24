@@ -1,5 +1,3 @@
-import pdb
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -22,6 +20,25 @@ def register(request):
     serializer.is_valid(raise_exception=True)
     data = serializer.data
     message, valid = UserRepository.create(data)
+
+    if not valid:
+        return Response(
+            data={'message': message},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    return Response(
+        data={'message': message},
+        status=status.HTTP_201_CREATED
+    )
+
+
+@api_view(['GET'])
+@permission_classes((IsAuthenticated, ))
+def get_media_list(request):
+    page = request.GET.get('page', 1)
+    media_type = request.GET.get('media_type', 'movie')
+    message, valid = ListRepository.get_platform_list(media_type, page)
 
     if not valid:
         return Response(

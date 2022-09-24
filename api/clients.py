@@ -38,8 +38,8 @@ class TheMovieDbClient(object):
 
         return return_response, error_message
 
-    def get_list_movie(self, page):
-        return self.send_request('get', '/discover/movie', params={'page': page})
+    def get_list_media(self, media_type, page):
+        return self.send_request('get', '/discover/{}'.format(media_type), params={'page': page})
 
     def get_external_movie_id_by_media_id(self, media_id):
         return self.send_request('get', '/movie/{}/external_ids'.format(media_id))
