@@ -1,5 +1,3 @@
-import pdb
-
 from django.db import transaction
 from django.forms import model_to_dict
 from django_q.tasks import async_task
@@ -22,13 +20,16 @@ class ListRepository:
     @staticmethod
     def create_list(data, user):
         with transaction.atomic():
-            Watchlist.objects.create(
-                username=user,
-                description=data['description'],
-                name=data['name']
-            )
+            try:
+                Watchlist.objects.create(
+                    username=user,
+                    description=data['description'],
+                    name=data['name']
+                )
 
-            return 'Success', True
+                return 'Success', True
+            except Exception as e:
+                return str(e), False
 
     @staticmethod
     def get_list(user):
@@ -72,7 +73,8 @@ class ListRepository:
     @staticmethod
     def delete_list(user, list_id):
         with transaction.atomic():
-            watchlist = Watchlist.objects.filter(watchlist_id=list_id, username=user).last()
+            watchlist = Watchlist.objects.filter(
+                watchlist_id=list_id, username=user, is_deleted=False).last()
 
             if not watchlist:
                 return 'Watchlist doesnt exist', False
